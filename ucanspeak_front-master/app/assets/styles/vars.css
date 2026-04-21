@@ -1,0 +1,31 @@
+:root {
+    --p-inputtext-focus-ring-shadow: unset !important;
+    --p-select-focus-ring-shadow: unset !important;
+    --p-checkbox-checked-background: #1AB266 !important;
+    --p-checkbox-checked-border-color: #1AB266 !important;
+    --p-checkbox-checked-hover-background: #1AB266 !important;
+    --p-checkbox-checked-hover-border-color: #1AB266 !important;
+        /* Настройки кнопок */
+    /*--p-button-padding-y: 0.5rem;*/
+    /*--p-button-padding-x: 1rem;*/
+    --p-button-border-radius: 0.25rem;
+    --p-button-font-size: 0.875rem;
+
+    /* Настройки полей ввода */
+    --p-input-padding-y: 0.5rem;
+    --p-input-padding-x: 0.75rem;
+    --p-input-border-radius: 0.25rem;
+    --p-input-font-size: 0.875rem;
+
+    /* Настройки карточек */
+    --p-card-padding: 1rem;
+    --p-card-border-radius: 0.5rem;
+
+    /* Настройки таблиц */
+    --p-table-cell-padding-y: 0.5rem;
+    --p-table-cell-padding-x: 0.75rem;
+
+    /* Другие общие настройки */
+    --p-border-radius: 0.25rem;
+    --p-spacing: 1rem;
+}

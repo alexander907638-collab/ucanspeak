@@ -1,0 +1,24 @@
+Django==5.2.13
+djangorestframework==3.17.1
+django-cors-headers==4.9.0
+django-ckeditor-5==0.2.20
+django-environ==0.13.0
+django-cleanup==9.0.0
+djoser==2.3.3
+redis==7.4.0
+requests==2.33.1
+pytils==0.4.4
+psycopg-binary==3.3.3
+
+# Версии ниже не удалось спинить — пакеты не установлены в текущем окружении.
+# Александр: замени на реальные версии из `pip freeze` на сервере.
+python-dotenv
+django-db-logger
+celery
+django-colorfield
+aiomysql
+asyncpg
+beautifulsoup4
+unidecode
+
+django-nested-admin==4.1.6

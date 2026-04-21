@@ -1,0 +1,67 @@
+::-webkit-scrollbar
+  width: 5px
+  height: 5px
+
+::-webkit-scrollbar-track
+  background: #f1f1f1
+
+::-webkit-scrollbar-thumb
+  background: #8888D4
+  border-radius: 500px
+
+::-webkit-scrollbar-thumb:hover
+  background: #8888D4
+
+section
+  padding: 40px 0
+.p-inputtext
+  background: #F6F6F9 !important
+
+.video-modal
+  position: absolute
+  top: 80px
+  width: 100%
+  height: calc(100% - 70px)
+  max-width: 650px
+
+  //@media (max-height: 700px)
+  //  height: 70vh
+
+  @media (max-width: 1400px)
+    max-width: 572px
+  @media (max-width: 1200px)
+    max-width: 486px
+  @media (max-width: 1024px)
+    max-width: 95vw
+    top: 60px
+    height: calc(100% - 120px)
+    //height: 85vh
+
+  & .p-dialog-content
+    padding: 0 !important
+
+.block-w-table
+  overflow-x: auto
+  overflow-y: hidden
+  table
+    width: 100%
+    @media (max-width: 900px)
+      width: 700px !important
+
+ul
+  padding-left: 20px !important
+
+  li
+    position: relative
+    margin-bottom: 12px
+    &:last-child
+      margin-bottom: 0
+    &::before
+      position: absolute
+      content: ""
+      width: 8px !important
+      height: 8px !important
+      background: #3333E8
+      border-radius: 100% !important
+      left: -20px !important
+      top: 6px

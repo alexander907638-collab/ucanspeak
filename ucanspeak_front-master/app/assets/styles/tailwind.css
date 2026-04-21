@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Onest:wght@100..900&display=swap');
+@layer tailwind-base, primevue, tailwind-utilities;
+
+@layer tailwind-base {
+  @tailwind base;
+}
+
+@layer tailwind-utilities {
+  @tailwind components;
+  @tailwind utilities;
+}
+
+* {
+  @apply font-onest font-medium;
+}
+
+body {
+  @apply bg-[#f6f6f9] text-black;
+}

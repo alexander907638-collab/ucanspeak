@@ -1,0 +1,54 @@
+services:
+  backend:
+    build:
+      context: ./ucanspeack_api-master
+      dockerfile: Dockerfile
+    container_name: ucanspeak_backend
+    restart: unless-stopped
+    env_file:
+      - ./ucanspeack_api-master/.env
+    volumes:
+      - /var/ucanspeak/media:/app/media
+      - /var/ucanspeak/static:/app/static
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - ucanspeak_net
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./ucanspeak_front-master
+      dockerfile: Dockerfile
+    container_name: ucanspeak_frontend
+    restart: unless-stopped
+    env_file:
+      - ./ucanspeak_front-master/.env
+    networks:
+      - ucanspeak_net
+    expose:
+      - "3000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ucanspeak_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - /var/ucanspeak/media:/var/ucanspeak/media:ro
+      - /var/ucanspeak/static:/var/ucanspeak/static:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - ucanspeak_net
+
+networks:
+  ucanspeak_net:
+    name: ucanspeak_net
+    driver: bridge
