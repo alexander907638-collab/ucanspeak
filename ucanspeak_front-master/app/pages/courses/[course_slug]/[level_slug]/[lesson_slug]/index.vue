@@ -445,13 +445,13 @@ watch(is_mobile, (newVal, oldVal) => {
         <div class="space-y-1 mb-3"
              v-for="group in  module?.module_dictionary_groups.length>0 ? module?.module_dictionary_groups : lesson.dictionary_groups ">
 
-          <UIEditAdminBtn
-            app="lesson"
-            model="dictionarygroup"
-            :id="group.id"
-            :label="group.title"
-          />
-          <TypingText18 v-else :text="group.title"/>
+		<UIEditAdminBtn
+		 app="lesson"
+		 model="dictionarygroup"
+		 :id="group.id"
+		 :label="group.title"
+		/>
+		<TypingText18 v-if="!user || !user.is_superuser" :text="group.title"/>
 
           <CardDictionaryItem :dictionary_direction="dictionary_direction"
                               :item="item"
