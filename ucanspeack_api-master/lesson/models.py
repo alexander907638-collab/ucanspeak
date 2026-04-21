@@ -162,6 +162,7 @@ class Video(models.Model):
     block = models.ForeignKey(ModuleBlock, on_delete=models.CASCADE,null=True, blank=True, related_name="videos", verbose_name="Блок")
     video_src = models.URLField(verbose_name="Ссылка на видео",null=True, blank=True, editable=False)
     file = models.FileField(upload_to='lessons/module/video/', null=True, blank=True)
+    thumbnail = models.ImageField(upload_to='lessons/module/video/thumbnails/', null=True, blank=True)
     video_number = models.CharField(max_length=10, blank=True, null=True)
     order = models.IntegerField(default=0, verbose_name="Порядок")
     def __str__(self):

@@ -53,7 +53,7 @@ class VideoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Video
-        fields = ["id", "video_src", "phrases","watermarks", "file", "video_number"]
+        fields = ["id", "video_src", "phrases","watermarks", "file", "video_number", "thumbnail"]
 
     def get_file(self, obj):
         request = self.context.get("request")

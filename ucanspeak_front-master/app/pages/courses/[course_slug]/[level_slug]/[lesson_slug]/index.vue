@@ -457,6 +457,7 @@ watch(is_mobile, (newVal, oldVal) => {
                               :item="item"
                               v-for="item in group.items"
                               :opened="opened_dictionary_id === item.id"
+                              :show_checkbox="true"
                               @toggle_open="handleToggleDictionaryOpen"
                               @toggle_fav="handleToggleFav"
                               :loading="fav_loading"/>
@@ -523,6 +524,7 @@ watch(is_mobile, (newVal, oldVal) => {
                           :item="item"
                           v-for="item in group.items"
                           :opened="opened_dictionary_id === item.id"
+                          :show_checkbox="true"
                           @toggle_open="handleToggleDictionaryOpen"
                           @toggle_fav="handleToggleFav"
                           :loading="fav_loading"/>

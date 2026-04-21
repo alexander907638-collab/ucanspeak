@@ -7,11 +7,17 @@ services:
     restart: unless-stopped
     env_file:
       - ./ucanspeack_api-master/.env
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_DB: "0"
     volumes:
       - /var/ucanspeak/media:/app/media
       - /var/ucanspeak/static:/app/static
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
     networks:
       - ucanspeak_net
     expose:
@@ -48,7 +54,22 @@ services:
     networks:
       - ucanspeak_net
 
+  redis:
+    image: redis:7-alpine
+    container_name: ucanspeak_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - ucanspeak_redis_data:/data
+    networks:
+      - ucanspeak_net
+    expose:
+      - "6379"
+
 networks:
   ucanspeak_net:
     name: ucanspeak_net
     driver: bridge
+
+volumes:
+  ucanspeak_redis_data:

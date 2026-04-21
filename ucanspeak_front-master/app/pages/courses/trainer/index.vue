@@ -36,7 +36,7 @@ const {user} = storeToRefs(authStore)
                    progress_color ="#8B8BF2"
                    :value="course.progress_percentage"
                    class="my-[5px]"/>
-          <p v-if="!user.is_pupil" class="font-normal text-xs leading-[130%] text-[#8f8fa3]">{{course.completed_levels}} из {{course.total_levels}} уроков пройдено</p>
+          <p v-if="!user.is_pupil" class="font-normal text-xs leading-[130%] text-[#8f8fa3]">{{course.completed_levels}} из {{course.total_levels}} уровней пройдено</p>
 
         </div>
         <div v-else>

@@ -4,10 +4,11 @@ const config = useRuntimeConfig();
 
 const props = defineProps<{
   showPreview: boolean;
-
+  use_modal?: boolean;
   data: {
     video_src: string
     file: string
+    thumbnail?: string | null
     phrases: {
       id: number
       start_time: string
@@ -86,6 +87,13 @@ onMounted(() => {
   if(!props.showPreview) return
   document.addEventListener('fullscreenchange', onFullscreenChange)
 
+  // Приоритет 1: thumbnail с сервера — мгновенно, без загрузки видеофайла
+  if (props.data.thumbnail) {
+    firstFrame.value = props.data.thumbnail
+    return
+  }
+
+  // Приоритет 2: fallback — canvas-генерация
   const tempVideo = document.createElement('video')
   tempVideo.src = props.data.file
   tempVideo.crossOrigin = 'anonymous'

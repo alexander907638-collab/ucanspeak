@@ -8,6 +8,7 @@ from .models import *
 from .serializers import *
 from rest_framework.decorators import action
 
+from django.core.cache import cache
 from django.db.models import Count, Q, F, Case, When, Value, IntegerField, BooleanField, ExpressionWrapper, Prefetch, Exists, OuterRef
 
 
@@ -52,6 +53,11 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         # Проверяем, залогинен ли пользователь
         if user.is_authenticated:
+            cache_key = f'user_{user.id}_courses'
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return cached
+
             # Для залогиненного пользователя - с прогрессом
             levels_qs = Level.objects.annotate(
                 total_lessons=Count('lessons', distinct=True),
@@ -94,6 +100,11 @@ class CourseViewSet(viewsets.ModelViewSet):
             ).prefetch_related(
                 Prefetch('levels', queryset=levels_qs)
             )
+
+            # материализуем для кеширования
+            courses_list = list(courses)
+            cache.set(cache_key, courses_list, timeout=300)
+            return courses_list
         else:
             # Для незалогиненного пользователя - без прогресса
             levels_qs = Level.objects.annotate(
@@ -124,13 +135,26 @@ class LevelViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
+        if user.is_authenticated:
+            cache_key = f'user_{user.id}_levels'
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return cached
+
         # ---------- Lessons queryset ----------
         if user.is_authenticated:
             lessons_qs = Lesson.objects.annotate(
-                total_blocks=Count('modules__blocks', distinct=True),
+                total_blocks=Count(
+                    'modules__blocks',
+                    filter=Q(modules__blocks__can_be_done=True),
+                    distinct=True
+                ),
                 done_blocks=Count(
                     'modules__blocks__moduleblockdone',
-                    filter=Q(modules__blocks__moduleblockdone__user=user),
+                    filter=Q(
+                        modules__blocks__moduleblockdone__user=user,
+                        modules__blocks__can_be_done=True
+                    ),
                     distinct=True
                 ),
             ).annotate(
@@ -151,7 +175,11 @@ class LevelViewSet(viewsets.ModelViewSet):
             ).order_by('order_num')
         else:
             lessons_qs = Lesson.objects.annotate(
-                total_blocks=Count('modules__blocks', distinct=True),
+                total_blocks=Count(
+                    'modules__blocks',
+                    filter=Q(modules__blocks__can_be_done=True),
+                    distinct=True
+                ),
                 done_blocks=Value(0, output_field=IntegerField()),
                 progress=Value(0, output_field=IntegerField()),
                 is_done=Value(False, output_field=BooleanField())
@@ -191,6 +219,11 @@ class LevelViewSet(viewsets.ModelViewSet):
                 progress=Value(0, output_field=IntegerField()),
                 is_done=Value(False, output_field=BooleanField())
             )
+
+        if user.is_authenticated:
+            levels_list = list(levels)
+            cache.set(cache_key, levels_list, timeout=300)
+            return levels_list
 
         return levels
 
@@ -249,10 +282,17 @@ class LessonViewSet(viewsets.ModelViewSet):
         # ---------- Modules queryset ----------
         if user.is_authenticated:
             modules_qs = Module.objects.annotate(
-                total_blocks=Count('blocks', distinct=True),
+                total_blocks=Count(
+                    'blocks',
+                    filter=Q(blocks__can_be_done=True),
+                    distinct=True
+                ),
                 done_blocks=Count(
                     'blocks__moduleblockdone',
-                    filter=Q(blocks__moduleblockdone__user=user),
+                    filter=Q(
+                        blocks__moduleblockdone__user=user,
+                        blocks__can_be_done=True
+                    ),
                     distinct=True
                 )
             ).annotate(
@@ -265,7 +305,11 @@ class LessonViewSet(viewsets.ModelViewSet):
             ).order_by('sorting')
         else:
             modules_qs = Module.objects.annotate(
-                total_blocks=Count('blocks', distinct=True),
+                total_blocks=Count(
+                    'blocks',
+                    filter=Q(blocks__can_be_done=True),
+                    distinct=True
+                ),
                 done_blocks=Value(0, output_field=IntegerField()),
                 is_done=Value(False, output_field=BooleanField())
             ).order_by('sorting')
@@ -273,10 +317,17 @@ class LessonViewSet(viewsets.ModelViewSet):
         # ---------- Lessons queryset ----------
         if user.is_authenticated:
             lessons_qs = Lesson.objects.annotate(
-                total_blocks=Count('modules__blocks', distinct=True),
+                total_blocks=Count(
+                    'modules__blocks',
+                    filter=Q(modules__blocks__can_be_done=True),
+                    distinct=True
+                ),
                 done_blocks=Count(
                     'modules__blocks__moduleblockdone',
-                    filter=Q(modules__blocks__moduleblockdone__user=user),
+                    filter=Q(
+                        modules__blocks__moduleblockdone__user=user,
+                        modules__blocks__can_be_done=True
+                    ),
                     distinct=True
                 )
             ).annotate(
@@ -300,7 +351,11 @@ class LessonViewSet(viewsets.ModelViewSet):
             )
         else:
             lessons_qs = Lesson.objects.annotate(
-                total_blocks=Count('modules__blocks', distinct=True),
+                total_blocks=Count(
+                    'modules__blocks',
+                    filter=Q(modules__blocks__can_be_done=True),
+                    distinct=True
+                ),
                 done_blocks=Value(0, output_field=IntegerField()),
                 progress=Value(0, output_field=IntegerField()),
                 is_done=Value(False, output_field=BooleanField())
@@ -374,10 +429,17 @@ class ModuleViewSet(viewsets.ModelViewSet):
             modules_qs = (
                 Module.objects
                 .annotate(
-                    total_blocks=Count('blocks', distinct=True),
+                    total_blocks=Count(
+                        'blocks',
+                        filter=Q(blocks__can_be_done=True),
+                        distinct=True
+                    ),
                     done_blocks=Count(
                         'blocks__moduleblockdone',
-                        filter=Q(blocks__moduleblockdone__user=user),
+                        filter=Q(
+                            blocks__moduleblockdone__user=user,
+                            blocks__can_be_done=True
+                        ),
                         distinct=True
                     ),
                 )
@@ -408,7 +470,11 @@ class ModuleViewSet(viewsets.ModelViewSet):
             modules_qs = (
                 Module.objects
                 .annotate(
-                    total_blocks=Count('blocks', distinct=True),
+                    total_blocks=Count(
+                        'blocks',
+                        filter=Q(blocks__can_be_done=True),
+                        distinct=True
+                    ),
                     done_blocks=Value(0, output_field=IntegerField()),
                     is_done=Value(False, output_field=BooleanField())
                 )
@@ -459,10 +525,16 @@ class ModuleViewSet(viewsets.ModelViewSet):
             lesson_stats = ModuleBlock.objects.filter(
                 id=module_block_id
             ).annotate(
-                total_blocks=Count('module__lesson__modules__blocks'),
+                total_blocks=Count(
+                    'module__lesson__modules__blocks',
+                    filter=Q(module__lesson__modules__blocks__can_be_done=True)
+                ),
                 done_blocks=Count(
                     'module__lesson__modules__blocks__moduleblockdone',
-                    filter=Q(module__lesson__modules__blocks__moduleblockdone__user=user)
+                    filter=Q(
+                        module__lesson__modules__blocks__moduleblockdone__user=user,
+                        module__lesson__modules__blocks__can_be_done=True
+                    )
                 )
             ).values('module__lesson', 'total_blocks', 'done_blocks').first()
 
@@ -470,9 +542,6 @@ class ModuleViewSet(viewsets.ModelViewSet):
                 lesson_id = lesson_stats['module__lesson']
                 total_blocks = lesson_stats['total_blocks']
                 done_blocks = lesson_stats['done_blocks']
-
-                print(total_blocks)
-                print(done_blocks)
 
                 # Обновляем статус урока
                 if total_blocks > 0 and done_blocks == total_blocks:
@@ -489,6 +558,12 @@ class ModuleViewSet(viewsets.ModelViewSet):
         except Exception as e:
             # Логируем ошибку, но не прерываем выполнение
             print(f"Error updating lesson status: {e}")
+
+        # Инвалидация кеша прогресса для этого юзера
+        cache.delete_many([
+            f'user_{user.id}_courses',
+            f'user_{user.id}_levels',
+        ])
 
         return Response(status=status.HTTP_200_OK)
 

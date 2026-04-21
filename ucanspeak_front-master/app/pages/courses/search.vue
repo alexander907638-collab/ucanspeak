@@ -7,6 +7,11 @@ const openedId = ref<number | null>(null)
 const loading = ref(false)
 const result = ref([])
 const q = ref('')
+const dictionary_direction = computed(() => {
+  // Если в строке есть кириллица — запрос русский, ответ английский
+  const hasCyrillic = /[а-яё]/i.test(q.value)
+  return hasCyrillic ? 'ruEN' : 'enRU'
+})
 const opened_dictionary_id = ref<number | null>(null)
 const handleToggleOpen = (id: number) => {
   openedId.value = openedId.value === id ? null : id
@@ -76,7 +81,7 @@ useSeoMeta({
             <div class="flex items-center gap-2" v-for="item in result.dictionary">
               <CardDictionaryItem
                   :item="item"
-                  dictionary_direction="ruEN"
+                  :dictionary_direction="dictionary_direction"
                   :opened="opened_dictionary_id === item.id"
                   @toggle_open="handleToggleDictionaryOpen"
                   @toggle_fav="handleToggleDictionaryFav"/>
