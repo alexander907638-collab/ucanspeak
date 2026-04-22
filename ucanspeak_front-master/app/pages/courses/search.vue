@@ -7,11 +7,8 @@ const openedId = ref<number | null>(null)
 const loading = ref(false)
 const result = ref([])
 const q = ref('')
-const dictionary_direction = computed(() => {
-  // Если в строке есть кириллица — запрос русский, ответ английский
-  const hasCyrillic = /[а-яё]/i.test(q.value)
-  return hasCyrillic ? 'ruEN' : 'enRU'
-})
+// Направление словаря фиксируется в момент поиска, а не на каждую введённую букву
+const dictionary_direction = ref<'ruEN' | 'enRU'>('ruEN')
 const opened_dictionary_id = ref<number | null>(null)
 const handleToggleOpen = (id: number) => {
   openedId.value = openedId.value === id ? null : id
@@ -21,9 +18,11 @@ const handleToggleDictionaryOpen = (id: number) => {
 }
 
 const search = async () => {
+  if (!q.value?.trim()) return
   loading.value = true
+  // Фиксируем направление отображения в момент запуска поиска
+  dictionary_direction.value = /[а-яё]/i.test(q.value) ? 'ruEN' : 'enRU'
   result.value = await $api.lessons.search(q.value)
-
   loading.value = false
 }
 
@@ -61,12 +60,15 @@ useSeoMeta({
 
 
   <CardBase padding="sm" class="space-y-3">
-    <InputGroup>
-      <InputGroupAddon>
-        <i class="pi pi-search"></i>
-      </InputGroupAddon>
-      <InputText :disabled="loading" v-model="q" @keydown.enter="search" placeholder="Поиск" />
-    </InputGroup>
+    <div class="flex gap-2">
+      <InputGroup>
+        <InputGroupAddon>
+          <i class="pi pi-search"></i>
+        </InputGroupAddon>
+        <InputText :disabled="loading" v-model="q" @keydown.enter="search" placeholder="Поиск" />
+      </InputGroup>
+      <Button label="Найти" severity="primary" :loading="loading" @click="search" class="shrink-0" />
+    </div>
 <!--    <p class="text-gray-400">Найдено 135 результатов</p>-->
     <Tabs value="0" class="relative">
 

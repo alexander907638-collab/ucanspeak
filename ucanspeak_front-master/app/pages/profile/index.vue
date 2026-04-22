@@ -159,7 +159,7 @@ useSeoMeta({
             Активна · до {{ user.max_logins }} {{ pluralize(user.max_logins, 'устройство', 'устройства', 'устройств') }} одновременно
           </p>
         </div>
-        <NuxtLink to="/tariffs">
+        <NuxtLink to="/tariff">
           <Button label="Продлить" class="!bg-white !text-[#7575F0] !border-white" />
         </NuxtLink>
       </div>

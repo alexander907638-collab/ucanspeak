@@ -15,60 +15,62 @@ const props = withDefaults(defineProps<{
 
 const checked = ref(false)
 
-const emits = defineEmits(['toggle_fav','toggle_open'])
+const emits = defineEmits(['toggle_fav', 'toggle_open'])
+
 const play = () => {
+  if (!props.item?.file) return
   audio.src = props.item.file
-  audio.play()
+  audio.play().catch(() => {})
+}
+
+// Клик по пилюле раскрывает перевод И проигрывает аудио одновременно
+const handlePillClick = () => {
+  emits('toggle_open', props.item.id)
+  play()
 }
 </script>
 
-
 <template>
-  <div class="flex items-start gap-3 w-full">
+  <div class="flex items-start gap-3">
     <!-- Чекбокс: только если show_checkbox=true -->
     <input
         v-if="show_checkbox"
         type="checkbox"
-        class="custom-checkbox mt-1.5"
+        class="custom-checkbox mt-2.5"
         v-model="checked"
         @click.stop
     >
 
-    <!-- Колонка с двумя пилюлями (items-end прижимает перевод к правому краю оригинала) -->
-    <div class="inline-flex flex-col items-end max-w-full min-w-0">
+    <!-- Колонка: пилюля оригинала + пилюля перевода снизу со сдвигом вправо -->
+    <div class="flex flex-col items-start gap-1 min-w-0 max-w-full">
 
-      <!-- Пилюля оригинала, ширина по контенту -->
+      <!-- Пилюля оригинала (p-2.5 / rounded-lg / gap-3 — как CardVoiceFile) -->
       <div
-          @click="emits('toggle_open', item.id)"
-          class="inline-flex items-center gap-2 bg-[#EFEFF5] hover:bg-[#e9e9e9] cursor-pointer px-3 py-1.5 select-none max-w-full"
-          style="border-radius: 10px;"
+          @click="handlePillClick"
+          class="bg-[#EFEFF5] hover:bg-[#e9e9e9] overflow-hidden p-2.5 rounded-lg cursor-pointer select-none max-w-full"
       >
-        <span
-            @click.stop="play"
-            class="text-base leading-[130%] break-words cursor-pointer"
-        >
-          {{ dictionary_direction === 'ruEN' ? item.text_ru : item.text_en }}
-        </span>
-        <UILikeBtn
-            v-if="user"
-            :class="loading ? 'disabled opacity-50' : ''"
-            @click.stop="emits('toggle_fav', item.id)"
-            v-model:value="item.is_favorite"
-            class="flex-shrink-0"
-        />
+        <div class="flex items-center gap-3">
+          <div class="text-base leading-[130%] break-words">
+            {{ dictionary_direction === 'ruEN' ? item.text_ru : item.text_en }}
+          </div>
+          <UILikeBtn
+              v-if="user"
+              :class="loading ? 'disabled opacity-50' : ''"
+              @click.stop="emits('toggle_fav', item.id)"
+              v-model:value="item.is_favorite"
+          />
+        </div>
       </div>
 
-      <!-- Пилюля перевода (видна при opened) — прижата к правому краю оригинала через items-end родителя -->
+      <!-- Пилюля перевода: сдвиг 32px вправо (ml-8), p-2 / rounded-lg -->
       <div
           v-if="opened"
-          class="bg-[#7575F0] px-3 py-1.5 max-w-full mt-1"
-          style="border-radius: 10px;"
+          class="bg-[#7575F0] p-2 rounded-lg ml-8 inline-block max-w-[calc(100%-2rem)]"
       >
-        <p class="text-base text-white leading-[130%] break-words">
+        <p class="text-base leading-[130%] tracking-[-0.01em] text-white break-words">
           {{ dictionary_direction === 'ruEN' ? item.text_en : item.text_ru }}
         </p>
       </div>
-
     </div>
   </div>
 </template>
