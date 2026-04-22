@@ -9,11 +9,11 @@ useSeoMeta({title: 'Прогресс'})
 </script>
 
 <template>
-  <div>
+  <CardBase padding="md">
     <BlockBaseBreadcrumbs :items="[{label: 'Главная', to: '/'}, {label: 'Прогресс'}]"/>
-    <TypingText48 text="Прогресс" class="mb-6"/>
+    <TypingText28 text="Прогресс" class="mb-6"/>
 
-    <div class="space-y-6">
+    <div class="space-y-8">
 
       <!-- Тренажёр -->
       <section v-if="trainer_courses && trainer_courses.length">
@@ -24,10 +24,10 @@ useSeoMeta({title: 'Прогресс'})
                 v-for="level in course.levels"
                 :key="'tr_lvl_' + level.id"
                 :to="`/courses/trainer/${course.slug}/${level.slug}`"
-                class="flex items-center gap-4 p-[10px] bg-white border border-[#18181b]/10 rounded-[20px]"
+                class="flex items-center gap-4 p-[10px] bg-white border border-[#18181b]/10 rounded-[20px] hover:border-[#7575F0] transition"
             >
-              <div class="shrink-0 w-16 h-16 flex items-center justify-center rounded-[10px] border border-[18181b]/[0.5]">
-                <img v-if="level.icon" :src="level.icon" alt="" class="">
+              <div class="shrink-0 w-16 h-16 flex items-center justify-center rounded-[10px] border border-[#18181b]/10 bg-gray-50 overflow-hidden">
+                <img v-if="level.icon" :src="level.icon" alt="" class="max-w-full max-h-full object-contain">
               </div>
               <div class="w-full flex flex-col">
                 <span class="font-bold text-[14px] leading-[130%] text-[#2c2c2c] uppercase">{{ course.name }}</span>
@@ -58,9 +58,11 @@ useSeoMeta({title: 'Прогресс'})
                 v-for="level in course.levels"
                 :key="'lvl_' + level.id"
                 :to="`/courses/${course.slug}/${level.slug}`"
-                class="flex items-center gap-4 p-[10px] bg-white border border-[#18181b]/10 rounded-[20px]"
+                class="flex items-center gap-4 p-[10px] bg-white border border-[#18181b]/10 rounded-[20px] hover:border-[#7575F0] transition"
             >
-              <img v-if="level.icon" :src="level.icon" alt="">
+              <div class="shrink-0 w-16 h-16 flex items-center justify-center rounded-[10px] border border-[#18181b]/10 bg-gray-50 overflow-hidden">
+                <img v-if="level.icon" :src="level.icon" alt="" class="max-w-full max-h-full object-contain">
+              </div>
               <div class="w-full flex flex-col">
                 <div class="flex items-center">
                   <span class="font-bold text-[14px] leading-[130%] text-[#2c2c2c] uppercase">{{ course.title }}</span>
@@ -94,5 +96,5 @@ useSeoMeta({title: 'Прогресс'})
       </div>
 
     </div>
-  </div>
+  </CardBase>
 </template>

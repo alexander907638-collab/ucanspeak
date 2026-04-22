@@ -2,5 +2,10 @@
   "enabledMcpjsonServers": [
     "context7",
     "figma"
-  ]
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py check)"
+    ]
+  }
 }

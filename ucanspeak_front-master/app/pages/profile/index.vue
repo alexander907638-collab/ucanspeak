@@ -27,29 +27,27 @@ const user_data = ref({
 
 const show_password_form = ref(false)
 
-// TODO: нужны бек-эндпоинты active_sessions/terminate_session (S1.9)
-const sessions_data = ref({
-  total_active: 1,
-  max_logins: user.value?.max_logins || 0,
-  sessions: [] as any[]
+// Определение текущего устройства для секции сессий (заглушка до S1.9-BACKEND)
+const current_device_name = computed(() => {
+  if (typeof navigator === 'undefined') return 'Текущее устройство'
+  const ua = navigator.userAgent
+
+  let browser = 'Браузер'
+  if (ua.includes('Firefox/')) browser = 'Firefox'
+  else if (ua.includes('Edg/')) browser = 'Edge'
+  else if (ua.includes('Chrome/')) browser = 'Chrome'
+  else if (ua.includes('Safari/')) browser = 'Safari'
+  else if (ua.includes('OPR/') || ua.includes('Opera/')) browser = 'Opera'
+
+  let os = 'устройство'
+  if (ua.includes('Windows')) os = 'Windows'
+  else if (ua.includes('Mac OS') || ua.includes('Macintosh')) os = 'macOS'
+  else if (ua.includes('Linux')) os = 'Linux'
+  else if (ua.includes('Android')) os = 'Android'
+  else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS'
+
+  return `${browser} на ${os}`
 })
-
-const sessions_expanded = ref(false)
-
-const visible_sessions = computed(() => {
-  const list = sessions_data.value?.sessions || []
-  return sessions_expanded.value ? list : list.slice(0, 4)
-})
-
-const hidden_sessions_count = computed(() => {
-  const total = sessions_data.value?.sessions?.length || 0
-  return Math.max(0, total - 4)
-})
-
-async function terminate_session(session_id: number) {
-  // TODO: implement when backend ready
-  toast.add({ severity: 'info', summary: 'Скоро', detail: 'Функция будет доступна в ближайшем обновлении', life: 2000 })
-}
 
 const avatarLabel = computed(() => {
   if (user.value?.full_name) {
@@ -82,7 +80,7 @@ function formatSessionTime(iso: string): string {
   if (diffMin < 2) return 'сейчас'
   if (diffMin < 60) return `${diffMin} мин назад`
   const diffHr = Math.floor(diffMin / 60)
-  if (diffHr < 24) return `${diffHr} ${pluralize(diffHr, 'ча��', 'часа', 'часов')} назад`
+  if (diffHr < 24) return `${diffHr} ${pluralize(diffHr, 'час', 'часа', 'часов')} назад`
   const diffDay = Math.floor(diffHr / 24)
   if (diffDay < 7) return `${diffDay} ${pluralize(diffDay, 'день', 'дня', 'дней')} назад`
   return formatDate(iso)
@@ -142,36 +140,38 @@ useSeoMeta({
 
 <template>
   <div>
-    <BlockBaseBreadcrumbs :items="[{ label: 'Главная', to: '/' }, { label: 'Профиль' }]" />
-    <TypingText48 text="Профиль" class="mb-6" />
-
-    <div class="space-y-3">
-
-      <!-- 1. CTA подписка -->
-      <CardBase v-if="user && !user.is_pupil" padding="sm" class="relative overflow-hidden">
-        <div class="absolute inset-0 -z-10"
-             style="background: linear-gradient(135deg, #7575F0 0%, #9F7AEA 100%);"></div>
-        <div class="flex items-center justify-between gap-4 flex-wrap text-white">
-          <div>
-            <p class="text-xs opacity-80 uppercase tracking-wider mb-1">Ваша подписка</p>
-            <p class="text-lg font-semibold mb-1">
-              {{ user?.is_school ? 'Школа' : 'Ученик' }}
-              <span v-if="user?.subscription_expire" class="font-normal opacity-90">
-                · до {{ formatDate(user.subscription_expire) }}
-              </span>
-            </p>
-            <p class="text-sm opacity-80" v-if="user?.max_logins">
-              Активна · до {{ user.max_logins }} {{ pluralize(user.max_logins, 'устройство', 'устройства', 'устройств') }} одновременно
-            </p>
-          </div>
-          <NuxtLink to="/tariff">
-            <Button label="Продлить" class="!bg-white !text-[#7575F0] !border-white" />
-          </NuxtLink>
+    <!-- 1. CTA-баннер подписки — ВНЕ CardBase, отдельным div с gradient -->
+    <div
+        v-if="user && !user.is_pupil"
+        class="rounded-2xl p-5 text-white mb-4"
+        style="background: linear-gradient(135deg, #7575F0 0%, #9F7AEA 100%);"
+    >
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <p class="text-xs opacity-80 uppercase tracking-wider mb-1">Ваша подписка</p>
+          <p class="text-lg font-semibold mb-1">
+            {{ user?.is_school ? 'Школа' : 'Ученик' }}
+            <span v-if="user?.subscription_expire" class="font-normal opacity-90">
+              · до {{ formatDate(user.subscription_expire) }}
+            </span>
+          </p>
+          <p class="text-sm opacity-80" v-if="user?.max_logins">
+            Активна · до {{ user.max_logins }} {{ pluralize(user.max_logins, 'устройство', 'устройства', 'устройств') }} одновременно
+          </p>
         </div>
-      </CardBase>
+        <NuxtLink to="/tariffs">
+          <Button label="Продлить" class="!bg-white !text-[#7575F0] !border-white" />
+        </NuxtLink>
+      </div>
+    </div>
 
-      <!-- 2. Личные данные -->
-      <CardBase padding="sm">
+    <!-- 2. Вся остальная страница — В ОДНОЙ CardBase padding="md" -->
+    <CardBase padding="md">
+      <BlockBaseBreadcrumbs :items="[{ label: 'Главная', to: '/' }, { label: 'Профиль' }]" />
+      <TypingText28 text="Профиль" class="mb-6" />
+
+      <!-- Секция: Личные данные -->
+      <section class="mb-6 pb-6 border-b border-gray-100">
         <h2 class="text-base font-semibold mb-4">Личные данные</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -240,10 +240,10 @@ useSeoMeta({
         <div class="mt-4 flex justify-end">
           <Button label="Сохранить изменения" severity="success" @click="send" :loading="pending" />
         </div>
-      </CardBase>
+      </section>
 
-      <!-- 3. Пароль -->
-      <CardBase padding="sm">
+      <!-- Секция: Пароль -->
+      <section class="mb-6 pb-6 border-b border-gray-100">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h2 class="text-base font-semibold">Пароль</h2>
@@ -276,75 +276,51 @@ useSeoMeta({
             <Button label="Обновить пароль" severity="success" @click="send" :loading="pending" />
           </div>
         </div>
-      </CardBase>
+      </section>
 
-      <!-- 4. Сессии -->
-      <CardBase padding="sm" v-if="sessions_data && sessions_data.sessions.length > 0">
+      <!-- Секция: Активные сессии (заглушка до S1.9) -->
+      <section class="mb-6 pb-6 border-b border-gray-100">
         <div class="flex items-center justify-between mb-0.5 flex-wrap gap-2">
           <h2 class="text-base font-semibold">Активные сессии</h2>
           <span class="text-sm text-gray-500">
-            {{ sessions_data.total_active || 0 }} из {{ sessions_data.max_logins || 0 }} активны
+            1 из {{ user?.max_logins || 1 }} активны
           </span>
         </div>
         <p class="text-sm text-gray-500 mb-3">Устройства где вы сейчас вошли</p>
 
-        <div>
-          <div
-              v-for="session in visible_sessions"
-              :key="session.id"
-              class="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0 flex-wrap gap-2"
-          >
+        <div class="flex justify-between items-center py-3 flex-wrap gap-2">
+          <div>
+            <p class="font-medium text-sm">{{ current_device_name }}</p>
+            <p class="text-xs text-gray-500">Последняя активность: сейчас</p>
+          </div>
+          <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+            Эта сессия
+          </span>
+        </div>
+        <p class="text-xs text-gray-400 mt-2 italic">
+          Полный список сессий и управление появятся в ближайшем обновлении
+        </p>
+      </section>
+
+      <!-- Секция: Опасная зона (без заголовка) -->
+      <section v-if="user && !user.is_pupil">
+        <div class="rounded-xl p-4 border space-y-3" style="background: #FFFBFB; border-color: #FECACA;">
+          <div class="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <p class="font-medium text-sm">{{ session.user_agent_short || session.user_agent || 'Неизвестное устройство' }}</p>
-              <p class="text-xs text-gray-500">
-                Последняя активность: {{ formatSessionTime(session.last_used_at) }}
-                <span v-if="session.ip_address"> · IP {{ session.ip_address }}</span>
-              </p>
+              <p class="font-medium text-sm">Выйти из аккаунта</p>
+              <p class="text-xs text-gray-500">На этом устройстве</p>
             </div>
-            <span v-if="session.is_current"
-                  class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
-              Эта сессия
-            </span>
-            <button v-else
-                    class="text-xs text-red-600 hover:underline cursor-pointer"
-                    @click="terminate_session(session.id)">
-              Завершить
-            </button>
+            <Button label="Выйти" severity="danger" outlined @click="$api.auth.logout(false)" />
           </div>
-
-          <div v-if="hidden_sessions_count > 0" class="pt-3 text-center">
-            <button
-                class="text-sm text-[#7575F0] hover:underline cursor-pointer font-medium"
-                @click="sessions_expanded = !sessions_expanded"
-            >
-              {{ sessions_expanded ? 'Свернуть' : `Показать все (${hidden_sessions_count} скрыто)` }}
-            </button>
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <p class="font-medium text-sm">Выйти со всех устройств</p>
+              <p class="text-xs text-gray-500">Завершить все активные сессии</p>
+            </div>
+            <Button label="Выйти везде" severity="danger" outlined @click="$api.auth.logout(true)" />
           </div>
         </div>
-      </CardBase>
-
-      <!-- 5. Кнопки выхода -->
-      <div v-if="user && !user.is_pupil" class="rounded-xl p-4 border space-y-3" style="background: #FFFBFB; border-color: #FECACA;">
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <p class="font-medium text-sm">Выйти из аккаунта</p>
-            <p class="text-xs text-gray-500">На этом устройстве</p>
-          </div>
-          <Button label="Выйти" severity="danger" outlined @click="$api.auth.logout(false)" />
-        </div>
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <p class="font-medium text-sm">Выйти со всех устройств</p>
-            <p class="text-xs text-gray-500">Завершить все активные сессии</p>
-          </div>
-          <Button label="Выйти везде" severity="danger" outlined @click="$api.auth.logout(true)" />
-        </div>
-      </div>
-
-    </div>
+      </section>
+    </CardBase>
   </div>
 </template>
-
-<style scoped>
-
-</style>
