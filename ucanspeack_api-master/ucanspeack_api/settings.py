@@ -39,7 +39,9 @@ INSTALLED_APPS = [
     'user.apps.UserConfig',
     'lesson.apps.LessonConfig',
     'train.apps.TrainConfig',
-    'search.apps.SearchConfig'
+    'search.apps.SearchConfig',
+    'rest_framework_simplejwt.token_blacklist',
+    'user_sessions',
 ]
 
 MIDDLEWARE = [
@@ -150,6 +152,11 @@ DJOSER = {
         'token_create': 'user.serializers.auth.CustomTokenCreateSerializer',
         'user_create': 'user.serializers.create.UserCreateSerializer',
     },
+}
+
+SIMPLE_JWT = {
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
 }
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

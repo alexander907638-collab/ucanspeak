@@ -14,14 +14,12 @@ from django.db.models import Count, Q, F, Case, When, Value, IntegerField, Boole
 
 class DictionaryItemFavoriteListAPIView(generics.ListAPIView):
     serializer_class = DictionaryItemSerializer
-    pagination_class = None
 
     def get_queryset(self):
         return (
             DictionaryItem.objects
             .filter(dictionaryitemfavorite__user=self.request.user)
             .annotate(is_favorite=Value(True, output_field=BooleanField()))
-            .distinct()
         )
 
 class TariffsListAPIView(generics.ListAPIView):
@@ -35,14 +33,12 @@ class TariffsListAPIView(generics.ListAPIView):
 
 class LessonItemFavoriteListAPIView(generics.ListAPIView):
     serializer_class = LessonItemFavoriteItemSerializer
-    pagination_class = None
 
     def get_queryset(self):
         return (
             LessonItem.objects
             .filter(lesson_item_favorites__user=self.request.user)
             .annotate(is_like=Value(True, output_field=BooleanField()))
-            .distinct()
         )
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -55,7 +51,13 @@ class CourseViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
+        # Проверяем, залогинен ли пользователь
         if user.is_authenticated:
+            cache_key = f'user_{user.id}_courses'
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return cached
+
             # Для залогиненного пользователя - с прогрессом
             levels_qs = Level.objects.annotate(
                 total_lessons=Count('lessons', distinct=True),
@@ -99,7 +101,10 @@ class CourseViewSet(viewsets.ModelViewSet):
                 Prefetch('levels', queryset=levels_qs)
             )
 
-            return courses
+            # материализуем для кеширования
+            courses_list = list(courses)
+            cache.set(cache_key, courses_list, timeout=300)
+            return courses_list
         else:
             # Для незалогиненного пользователя - без прогресса
             levels_qs = Level.objects.annotate(
@@ -117,7 +122,7 @@ class CourseViewSet(viewsets.ModelViewSet):
                 Prefetch('levels', queryset=levels_qs)
             )
 
-            return courses
+        return courses
 
 
 class LevelViewSet(viewsets.ModelViewSet):
@@ -129,6 +134,12 @@ class LevelViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+
+        if user.is_authenticated:
+            cache_key = f'user_{user.id}_levels'
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return cached
 
         # ---------- Lessons queryset ----------
         if user.is_authenticated:
@@ -208,6 +219,11 @@ class LevelViewSet(viewsets.ModelViewSet):
                 progress=Value(0, output_field=IntegerField()),
                 is_done=Value(False, output_field=BooleanField())
             )
+
+        if user.is_authenticated:
+            levels_list = list(levels)
+            cache.set(cache_key, levels_list, timeout=300)
+            return levels_list
 
         return levels
 

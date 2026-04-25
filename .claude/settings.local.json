@@ -1,11 +1,14 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(python manage.py check)",
+      "Bash(python manage.py makemigrations user_sessions)",
+      "Bash(echo \"EXIT CODE: $?\")",
+      "Bash(python manage.py makemigrations user_sessions --noinput)"
+    ]
+  },
   "enabledMcpjsonServers": [
     "context7",
     "figma"
-  ],
-  "permissions": {
-    "allow": [
-      "Bash(python manage.py check)"
-    ]
-  }
+  ]
 }

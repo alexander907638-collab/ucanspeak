@@ -175,16 +175,22 @@ useSeoMeta({
         <h2 class="text-base font-semibold mb-4">Личные данные</h2>
 
         <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-          <div class="md:col-span-3 flex flex-col items-center gap-2">
-            <Avatar
-                :image="avatarPreview || user?.avatar"
-                :label="avatarPreview || user?.avatar ? null : avatarLabel"
-                size="xlarge"
-                shape="circle"
-                class="w-20 h-20 text-lg"
-            />
-            <label class="text-xs text-[#7575F0] hover:underline cursor-pointer">
-              Загрузить фото
+          <div class="md:col-span-3 flex flex-col items-center justify-start pt-4">
+            <label class="relative inline-block cursor-pointer group">
+              <Avatar
+                  :image="avatarPreview || user?.avatar"
+                  :label="avatarPreview || user?.avatar ? null : avatarLabel"
+                  size="xlarge"
+                  shape="circle"
+                  class="!w-32 !h-32 text-2xl"
+              />
+              <!-- Иконка-карандаш в правом нижнем углу аватара -->
+              <span
+                  class="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-white border border-gray-200 flex items-center justify-center shadow-sm group-hover:bg-gray-50 transition"
+                  title="Загрузить фото"
+              >
+                <i class="pi pi-pencil text-[#7575F0]" style="font-size: 14px;"></i>
+              </span>
               <input type="file" class="hidden" accept="image/*" @change="onFileSelected">
             </label>
           </div>
@@ -297,9 +303,6 @@ useSeoMeta({
             Эта сессия
           </span>
         </div>
-        <p class="text-xs text-gray-400 mt-2 italic">
-          Полный список сессий и управление появятся в ближайшем обновлении
-        </p>
       </section>
 
       <!-- Секция: Опасная зона (без заголовка) -->

@@ -2,53 +2,10 @@ from rest_framework import serializers
 from .models import Course, Level, Topic, AudioFile, Phrase, TopicDone, LevelDone
 
 
-class LevelSerializer(serializers.ModelSerializer):
-    progress = serializers.SerializerMethodField()
-    done_lessons_count = serializers.SerializerMethodField()
-    lessons_count = serializers.SerializerMethodField()
-    title = serializers.CharField(source="name", read_only=True)
-
-    class Meta:
-        model = Level
-        fields = (
-            "id",
-            "name",
-            "title",
-            "slug",
-            "description",
-            "order",
-            "url",
-            "icon",
-            "progress",
-            "done_lessons_count",
-            "lessons_count",
-        )
-
-    def get_lessons_count(self, obj):
-        return obj.topics.count()
-
-    def get_done_lessons_count(self, obj):
-        request = self.context.get("request")
-        if not request or not request.user.is_authenticated:
-            return 0
-        return TopicDone.objects.filter(
-            user=request.user,
-            topic__level=obj
-        ).count()
-
-    def get_progress(self, obj):
-        total = self.get_lessons_count(obj)
-        if total == 0:
-            return 0
-        done = self.get_done_lessons_count(obj)
-        return round((done / total) * 100)
-
-
 class CourseSerializer(serializers.ModelSerializer):
     completed_levels = serializers.SerializerMethodField()
     total_levels = serializers.SerializerMethodField()
     progress_percentage = serializers.SerializerMethodField()
-    levels = serializers.SerializerMethodField()
 
     class Meta:
         model = Course
@@ -60,7 +17,6 @@ class CourseSerializer(serializers.ModelSerializer):
             "completed_levels",
             "total_levels",
             "progress_percentage",
-            "levels",
         )
 
     def get_total_levels(self, obj):
@@ -82,9 +38,19 @@ class CourseSerializer(serializers.ModelSerializer):
         completed = self.get_completed_levels(obj)
         return round((completed / total) * 100, 2)
 
-    def get_levels(self, obj):
-        levels_qs = obj.levels.all().order_by("order_num")
-        return LevelSerializer(levels_qs, many=True, context=self.context).data
+
+class LevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Level
+        fields = (
+            "id",
+            "name",
+            "slug",
+            "description",
+            "order",
+            "url",
+            "icon",
+        )
 
 
 # ❗ Топики без аудио и фраз

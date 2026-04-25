@@ -17,6 +17,12 @@ urlpatterns = [
     path("api/search/", include("search.urls")),
     path('auth/', include('djoser.urls')),
     #path('auth/', include('djoser.urls.authtoken')),
+    # Наши расширенные JWT endpoints (создают/обновляют UserSession), ПЕРЕД Djoser
+    path('api/v1/auth/', include('user_sessions.urls_jwt')),
+    # Остальные Djoser JWT endpoints (verify, и т.д.)
+    path('api/v1/auth/', include('djoser.urls.jwt')),
+    # Sessions API
+    path('api/v1/', include('user_sessions.urls')),
     path("auth/token/login/", CustomTokenCreateView.as_view(), name="login"),
     path('auth/token/logout/', CustomLogoutView.as_view(), name='custom-logout'),
     path("ckeditor5/", include('django_ckeditor_5.urls'), name="ck_editor_5_upload_file"),
