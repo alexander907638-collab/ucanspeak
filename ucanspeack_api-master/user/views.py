@@ -2,8 +2,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from django.contrib.auth import get_user_model
-
 from user.models import School, UserToken
 from user.serializers.me import UserSerializer
 from user.serializers.auth import get_client_ip
@@ -87,10 +85,10 @@ class ForceLoginView(APIView):
                 {"detail": "login и password обязательны"}, status=400
             )
 
-        User = get_user_model()
-        try:
-            user = User.objects.get(email=login)
-        except User.DoesNotExist:
+        from user.utils import find_user_by_login_or_email
+
+        user = find_user_by_login_or_email(login)
+        if user is None:
             return Response({"detail": "Пользователь не найден"}, status=400)
 
         if not user.check_password(password):

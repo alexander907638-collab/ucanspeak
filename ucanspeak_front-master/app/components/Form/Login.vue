@@ -79,9 +79,9 @@ const forceLogin = async () => {
       <TypingText28 v-if="!school_auth" text="Авторизация"/>
 
       <UIInput fluid
-               placeholder="Введите адрес почты или телефон"
-               label="Email/Логин"
-               id="email"
+               placeholder="Введите ваш логин"
+               label="Логин"
+               id="login"
                v-model="form_data.login"/>
       <UIInput fluid
                placeholder="Введите пароль"
@@ -91,16 +91,21 @@ const forceLogin = async () => {
                v-model="form_data.password"/>
     </div>
     <Button fluid
-            class="mb-8"
+            class="mb-4"
             @click="login"
             :loading="loading"
             label="Войти" />
+    <div class="text-center mb-6 w-full">
+      <NuxtLink to="/forgot-password" class="text-sm text-[#7575F0] hover:underline">
+        Восстановить пароль
+      </NuxtLink>
+    </div>
     <p v-if="!school_auth">
       У вас нет аккаунта?
       <UILink label="Зарегистрируйтесь"
               link="#"
               @click.prevent="emits('change_form','register')"/>
-      на нашей платформе и получите 7 дней пробного доступа ко всем урокам и разделам!
+      на нашей платформе и получите 3 дня пробного доступа ко всем урокам и разделам!
     </p>
   </div>
 </CardBase>

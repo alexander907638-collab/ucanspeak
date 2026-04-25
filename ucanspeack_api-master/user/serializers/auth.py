@@ -20,12 +20,13 @@ class CustomTokenCreateSerializer(TokenCreateSerializer):
     password = serializers.CharField(required=True, write_only=True)
 
     def validate(self, attrs):
+        from user.utils import find_user_by_login_or_email
+
         login = attrs.get("login")
         password = attrs.get("password")
 
-        try:
-            user = User.objects.get(email=login)
-        except User.DoesNotExist:
+        user = find_user_by_login_or_email(login)
+        if user is None:
             raise serializers.ValidationError({"detail": "Пользователь не найден"})
 
         if not user.check_password(password):
