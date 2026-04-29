@@ -36,7 +36,7 @@ class VideoInline(nested_admin.NestedStackedInline):
     model = Video
     extra = 0
     sortable_field_name = "order"
-    fields = ("order", "video_src", "video_number", "file")
+    fields = ("order", "video_number", "file")
     inlines = [PhraseInline, WatermarkInline]
     verbose_name = "Видео"
     verbose_name_plural = "Видео"
