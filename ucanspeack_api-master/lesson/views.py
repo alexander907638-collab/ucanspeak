@@ -230,17 +230,18 @@ class LessonViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def videos(self, request, slug=None):
-        """Все видео урока с фразами"""
+        """Все видео урока с фразами и watermarks (одним SQL-запросом)."""
         lesson = self.get_object()
-        all_videos = []
 
-        # Проходим по модулям → блокам → видео
-        for module in lesson.modules.all():
-            for block in module.blocks.all():
-                for video in block.videos.all():
-                    all_videos.append(video)
+        videos_qs = (
+            Video.objects
+            .filter(block__module__lesson=lesson)
+            .select_related('block', 'block__module')
+            .prefetch_related('phrases', 'watermarks')
+            .order_by('block__module__sorting', 'block__sorting', 'order')
+        )
 
-        serializer = VideoSerializer(all_videos, many=True, context={"request": request})
+        serializer = VideoSerializer(videos_qs, many=True, context={"request": request})
         return Response(serializer.data)
 
     def get_queryset(self):
@@ -326,7 +327,7 @@ class LessonViewSet(viewsets.ModelViewSet):
                     default=Value(False),
                     output_field=BooleanField()
                 )
-            ).prefetch_related(
+            ).select_related('level', 'level__course').prefetch_related(
                 Prefetch('modules', queryset=modules_qs),
                 Prefetch(
                     'dictionary_groups__items',
@@ -343,7 +344,7 @@ class LessonViewSet(viewsets.ModelViewSet):
                 done_blocks=Value(0, output_field=IntegerField()),
                 progress=Value(0, output_field=IntegerField()),
                 is_done=Value(False, output_field=BooleanField())
-            ).prefetch_related(
+            ).select_related('level', 'level__course').prefetch_related(
                 Prefetch('modules', queryset=modules_qs),
                 Prefetch(
                     'dictionary_groups__items',
@@ -361,26 +362,28 @@ class ModuleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def retrieve(self, request, *args, **kwargs):
-        module = self.get_object()
+        # Загружаем модуль с цепочкой связей для slug одним SQL
+        chain = (
+            Module.objects
+            .select_related('lesson__level__course')
+            .get(pk=kwargs.get(self.lookup_field) or kwargs.get('pk') or kwargs.get('id'))
+        )
 
         user = request.user
+        last_url = (
+            f'/courses/{chain.lesson.level.course.slug}'
+            f'/{chain.lesson.level.slug}/{chain.lesson.slug}'
+            f'?m_id={chain.id}'
+        )
 
-        module_id = module.id
-        lesson_slug = module.lesson.slug
-        level_slug = module.lesson.level.slug
-        course_slug = module.lesson.level.course.slug
-
-        last_url= f'/courses/{course_slug}/{level_slug}/{lesson_slug}?m_id={module_id}'
-        if user.is_authenticated:
+        # Сохраняем last_lesson_url только если он изменился
+        if user.is_authenticated and user.last_lesson_url != last_url:
             user.last_lesson_url = last_url
             user.save(update_fields=['last_lesson_url'])
 
-        serializer = self.get_serializer(
-            module,
-            context={"request": request}
-        )
-
-
+        # Используем get_object для сериализации (с annotations из get_queryset)
+        module = self.get_object()
+        serializer = self.get_serializer(module, context={"request": request})
         return Response(serializer.data)
 
     def get_queryset(self):
@@ -410,6 +413,28 @@ class ModuleViewSet(viewsets.ModelViewSet):
 
         # ---------- Module queryset ----------
         if user.is_authenticated:
+            # Аннотируем блоки is_done для оптимизации сериализатора
+            blocks_qs = (
+                ModuleBlock.objects
+                .annotate(
+                    is_done_annotated=Exists(
+                        ModuleBlockDone.objects.filter(
+                            user=user,
+                            module_block=OuterRef('pk')
+                        )
+                    )
+                )
+                .prefetch_related(
+                    Prefetch('videos', queryset=Video.objects.prefetch_related('phrases', 'watermarks')),
+                    Prefetch(
+                        'items__lesson_item_favorites',
+                        queryset=lesson_item_favorites_qs,
+                        to_attr='user_favorites'
+                    )
+                )
+                .order_by('sorting')
+            )
+
             modules_qs = (
                 Module.objects
                 .annotate(
@@ -438,19 +463,32 @@ class ModuleViewSet(viewsets.ModelViewSet):
                         output_field=BooleanField()
                     )
                 )
+                .select_related('lesson')
                 .prefetch_related(
+                    Prefetch('blocks', queryset=blocks_qs),
                     Prefetch(
                         "module_dictionary_groups__items",
                         queryset=dictionary_items_qs
                     ),
-                    Prefetch(
-                        "blocks__items__lesson_item_favorites",
-                        queryset=lesson_item_favorites_qs,
-                        to_attr="user_favorites"
-                    )
                 )
             )
         else:
+            blocks_qs = (
+                ModuleBlock.objects
+                .annotate(
+                    is_done_annotated=Value(False, output_field=BooleanField())
+                )
+                .prefetch_related(
+                    Prefetch('videos', queryset=Video.objects.prefetch_related('phrases', 'watermarks')),
+                    Prefetch(
+                        'items__lesson_item_favorites',
+                        queryset=lesson_item_favorites_qs,
+                        to_attr='user_favorites'
+                    )
+                )
+                .order_by('sorting')
+            )
+
             modules_qs = (
                 Module.objects
                 .annotate(
@@ -462,16 +500,13 @@ class ModuleViewSet(viewsets.ModelViewSet):
                     done_blocks=Value(0, output_field=IntegerField()),
                     is_done=Value(False, output_field=BooleanField())
                 )
+                .select_related('lesson')
                 .prefetch_related(
+                    Prefetch('blocks', queryset=blocks_qs),
                     Prefetch(
                         "module_dictionary_groups__items",
                         queryset=dictionary_items_qs
                     ),
-                    Prefetch(
-                        "blocks__items__lesson_item_favorites",
-                        queryset=lesson_item_favorites_qs,
-                        to_attr="user_favorites"
-                    )
                 )
             )
 

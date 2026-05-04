@@ -83,6 +83,11 @@ class ModuleBlockSerializer(serializers.ModelSerializer):
         fields = ["id", "sorting", "caption", "type3_content", "videos", "items","is_done","can_be_done"]
 
     def get_is_done(self, obj):
+        # Быстрый путь — annotation из ModuleViewSet.get_queryset
+        if hasattr(obj, 'is_done_annotated'):
+            return obj.is_done_annotated
+
+        # Fallback на старую логику если сериализатор вызван не из ModuleViewSet
         request = self.context.get("request")
         if not request or request.user.is_anonymous:
             return False

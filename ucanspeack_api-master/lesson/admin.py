@@ -2,7 +2,7 @@ import nested_admin
 from django.contrib import admin
 from django.db.models import Count
 from django.urls import reverse
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 
 from lesson.models import (
     Course, Level, Lesson, Module, ModuleBlock, Video, Phrase, Watermark,
@@ -71,10 +71,9 @@ class ModuleInline(nested_admin.NestedStackedInline):
     verbose_name_plural = "Модули"
 
 
-class DictionaryItemInline(nested_admin.NestedTabularInline):
+class DictionaryItemInline(admin.TabularInline):
     model = DictionaryItem
     extra = 0
-    sortable_field_name = "order"
     fields = ("order", "text_ru", "text_en", "file")
     verbose_name = "Слово"
     verbose_name_plural = "Слова"
@@ -127,41 +126,288 @@ class TariffItemInline(admin.TabularInline):
 # ---- ModelAdmin ----
 
 @admin.register(Course)
-class CourseAdmin(nested_admin.NestedModelAdmin):
-    list_display = ("title", "slug")
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ("title", "slug", "levels_count")
     search_fields = ("title",)
-    inlines = [LevelInline]
+    readonly_fields = ("levels_links",)
+
+    fieldsets = (
+        (None, {
+            "fields": ("title", "slug"),
+        }),
+        ("Уровни курса", {
+            "fields": ("levels_links",),
+        }),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("levels")
+
+    @admin.display(description='Уровней')
+    def levels_count(self, obj):
+        return obj.levels.count()
+
+    @admin.display(description='Уровни')
+    def levels_links(self, obj):
+        if not obj.pk:
+            return "-"
+        levels = obj.levels.all().order_by("order_num")
+        if not levels:
+            return format_html(
+                '<a href="{}?course={}" class="addlink">Добавить уровень</a>',
+                reverse('admin:lesson_level_add'), obj.pk,
+            )
+        rows = []
+        for l in levels:
+            url = reverse('admin:lesson_level_change', args=[l.id])
+            rows.append(format_html(
+                '<li><a href="{}">{}. {}</a></li>',
+                url, l.order_num or '?', l.title or '(без названия)',
+            ))
+        add_url = reverse('admin:lesson_level_add')
+        rows.append(format_html(
+            '<li style="margin-top:6px"><a href="{}?course={}" class="addlink">'
+            'Добавить уровень</a></li>',
+            add_url, obj.pk,
+        ))
+        return format_html('<ul style="padding-left:18px;margin:0">{}</ul>',
+                           format_html_join('', '{}', ((r,) for r in rows)))
 
 
 @admin.register(Level)
-class LevelAdmin(nested_admin.NestedModelAdmin):
-    list_display = ("order_num", "title", "course", "slug")
+class LevelAdmin(admin.ModelAdmin):
+    list_display = ("order_num", "title", "course", "slug", "lessons_count")
     search_fields = ("title", "course__title")
     list_filter = ("course",)
     ordering = ["order_num"]
-    inlines = [LessonInline]
+    autocomplete_fields = ["course"]
+    readonly_fields = ("lessons_links",)
+
+    fieldsets = (
+        (None, {
+            "fields": ("order_num", "course", "title", "slug", "description", "icon"),
+        }),
+        ("Уроки уровня", {
+            "fields": ("lessons_links",),
+        }),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) \
+            .select_related("course") \
+            .prefetch_related("lessons")
+
+    @admin.display(description='Уроков')
+    def lessons_count(self, obj):
+        return obj.lessons.count()
+
+    @admin.display(description='Уроки')
+    def lessons_links(self, obj):
+        if not obj.pk:
+            return "-"
+        lessons = obj.lessons.all().order_by("order_num")
+        if not lessons:
+            return format_html(
+                '<a href="{}?level={}" class="addlink">Добавить урок</a>',
+                reverse('admin:lesson_lesson_add'), obj.pk,
+            )
+        rows = []
+        for ls in lessons:
+            url = reverse('admin:lesson_lesson_change', args=[ls.id])
+            rows.append(format_html(
+                '<li><a href="{}">{}. {}</a></li>',
+                url, ls.order_num or '?', ls.title or '(без названия)',
+            ))
+        add_url = reverse('admin:lesson_lesson_add')
+        rows.append(format_html(
+            '<li style="margin-top:6px"><a href="{}?level={}" class="addlink">'
+            'Добавить урок</a></li>',
+            add_url, obj.pk,
+        ))
+        return format_html('<ul style="padding-left:18px;margin:0">{}</ul>',
+                           format_html_join('', '{}', ((r,) for r in rows)))
 
 
 @admin.register(Lesson)
-class LessonAdmin(nested_admin.NestedModelAdmin):
+class LessonAdmin(admin.ModelAdmin):
+    """
+    Облегчённая админка урока: без вложенных инлайнов модулей/словаря/орфографии.
+    Связанные сущности доступны через ссылки в readonly-полях ниже и через
+    свои собственные admin-разделы (Module, ModuleBlock, DictionaryGroup и т.д.).
+    """
     list_display = ("order_num", "title", "level", "slug", "modules_count")
     search_fields = ("title", "level__title")
     list_filter = ("level",)
     ordering = ["order_num"]
-    inlines = [ModuleInline, DictionaryGroupInline, OrthographyItemInline]
+    autocomplete_fields = ["level"]
+
+    readonly_fields = (
+        "url",
+        "modules_links",
+        "dictionary_groups_links",
+        "orthography_items_links",
+    )
+
+    fieldsets = (
+        (None, {
+            "fields": (
+                "order_num", "title", "slug", "level",
+                "url", "file", "is_common", "is_free",
+            ),
+        }),
+        ("Связанные сущности", {
+            "fields": (
+                "modules_links",
+                "dictionary_groups_links",
+                "orthography_items_links",
+            ),
+            "description": (
+                "Ссылки на связанные модули, группы словаря и задания орфографии. "
+                "Для редактирования откройте конкретную сущность по ссылке — "
+                "она откроется на своей странице."
+            ),
+        }),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request).select_related("level", "level__course")
+        qs = qs.prefetch_related("modules", "dictionary_groups", "orthography_items")
+        return qs
 
     @admin.display(description='Модулей')
     def modules_count(self, obj):
         return obj.modules.count()
 
+    @admin.display(description='Модули')
+    def modules_links(self, obj):
+        if not obj.pk:
+            return "-"
+        modules = obj.modules.all().order_by("sorting")
+        if not modules:
+            return format_html(
+                '<a href="{}?lesson__id__exact={}" class="addlink">'
+                'Добавить модуль</a>',
+                reverse('admin:lesson_module_changelist'), obj.pk,
+            )
+        rows = []
+        for m in modules:
+            url = reverse('admin:lesson_module_change', args=[m.id])
+            rows.append(format_html(
+                '<li><a href="{}">{}. {}</a></li>',
+                url, m.sorting or m.index or '?', m.title or '(без названия)',
+            ))
+        add_url = reverse('admin:lesson_module_add')
+        rows.append(format_html(
+            '<li style="margin-top:6px"><a href="{}?lesson={}" class="addlink">'
+            'Добавить модуль</a></li>',
+            add_url, obj.pk,
+        ))
+        return format_html('<ul style="padding-left:18px;margin:0">{}</ul>',
+                           format_html_join('', '{}', ((r,) for r in rows)))
+
+    @admin.display(description='Группы словаря')
+    def dictionary_groups_links(self, obj):
+        if not obj.pk:
+            return "-"
+        groups = obj.dictionary_groups.all().order_by("order")
+        if not groups:
+            return format_html(
+                '<a href="{}?lesson__id__exact={}" class="addlink">'
+                'Добавить группу словаря</a>',
+                reverse('admin:lesson_dictionarygroup_changelist'), obj.pk,
+            )
+        rows = []
+        for g in groups:
+            url = reverse('admin:lesson_dictionarygroup_change', args=[g.id])
+            rows.append(format_html(
+                '<li><a href="{}">{}. {}</a></li>',
+                url, g.order or '?', g.title or '(без названия)',
+            ))
+        add_url = reverse('admin:lesson_dictionarygroup_add')
+        rows.append(format_html(
+            '<li style="margin-top:6px"><a href="{}?lesson={}" class="addlink">'
+            'Добавить группу словаря</a></li>',
+            add_url, obj.pk,
+        ))
+        return format_html('<ul style="padding-left:18px;margin:0">{}</ul>',
+                           format_html_join('', '{}', ((r,) for r in rows)))
+
+    @admin.display(description='Задания орфографии')
+    def orthography_items_links(self, obj):
+        if not obj.pk:
+            return "-"
+        items = obj.orthography_items.all().order_by("order")
+        if not items:
+            return "Нет заданий"
+        rows = []
+        for it in items:
+            rows.append(format_html(
+                '<li>{}. {} → {}</li>',
+                it.order or '?',
+                (it.ru_text or '')[:50],
+                (it.en_text or '')[:50],
+            ))
+        return format_html(
+            '<ul style="padding-left:18px;margin:0">{}</ul>'
+            '<p style="margin-top:6px;color:#666;font-size:12px">'
+            'Задания орфографии редактируются через интерфейс на сайте.</p>',
+            format_html_join('', '{}', ((r,) for r in rows)),
+        )
+
 
 @admin.register(Module)
-class ModuleAdmin(nested_admin.NestedModelAdmin):
-    list_display = ("title", "lesson_with_level", "index", "sorting")
+class ModuleAdmin(admin.ModelAdmin):
+    list_display = ("title", "lesson_with_level", "index", "sorting", "blocks_count")
     search_fields = ("title", "lesson__title", "lesson__level__title")
-    list_filter = ("lesson", "lesson__level")
+    list_filter = ("lesson__level",)
     ordering = ["sorting"]
-    inlines = [ModuleBlockInline]
+    autocomplete_fields = ["lesson"]
+    readonly_fields = ("blocks_links",)
+
+    fieldsets = (
+        (None, {
+            "fields": ("lesson", "index", "title", "sorting"),
+        }),
+        ("Блоки модуля", {
+            "fields": ("blocks_links",),
+        }),
+    )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) \
+            .select_related("lesson", "lesson__level") \
+            .prefetch_related("blocks")
+
+    @admin.display(description='Блоков')
+    def blocks_count(self, obj):
+        return obj.blocks.count()
+
+    @admin.display(description='Блоки модуля')
+    def blocks_links(self, obj):
+        if not obj.pk:
+            return "-"
+        blocks = obj.blocks.all().order_by("sorting")
+        if not blocks:
+            return format_html(
+                '<a href="{}?module={}" class="addlink">Добавить блок</a>',
+                reverse('admin:lesson_moduleblock_add'), obj.pk,
+            )
+        rows = []
+        for b in blocks:
+            url = reverse('admin:lesson_moduleblock_change', args=[b.id])
+            caption = (str(b.caption) if b.caption else '(без названия)')[:80]
+            rows.append(format_html(
+                '<li><a href="{}">{}. {}</a></li>',
+                url, b.sorting or '?', caption,
+            ))
+        add_url = reverse('admin:lesson_moduleblock_add')
+        rows.append(format_html(
+            '<li style="margin-top:6px"><a href="{}?module={}" class="addlink">'
+            'Добавить блок</a></li>',
+            add_url, obj.pk,
+        ))
+        return format_html('<ul style="padding-left:18px;margin:0">{}</ul>',
+                           format_html_join('', '{}', ((r,) for r in rows)))
 
     @admin.display(description='Урок (Уровень)', ordering='lesson__title')
     def lesson_with_level(self, obj):
@@ -269,13 +515,23 @@ class PhraseAdmin(nested_admin.NestedModelAdmin):
 
 
 @admin.register(DictionaryGroup)
-class DictionaryGroupAdmin(nested_admin.NestedModelAdmin):
-    list_display = ("order", "title", "lesson", "module_info")
+class DictionaryGroupAdmin(admin.ModelAdmin):
+    """С инлайном слов внутри группы — это нормальная глубина."""
+    list_display = ("order", "title", "lesson", "module_info", "items_count")
     search_fields = ("title", "lesson__title")
-    list_filter = ("lesson",)
+    list_filter = ("lesson__level",)
     ordering = ["-order", "id"]
-    autocomplete_fields = ['module']
+    autocomplete_fields = ['module', 'lesson']
     inlines = [DictionaryItemInline]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request) \
+            .select_related("lesson", "lesson__level", "module") \
+            .prefetch_related("items")
+
+    @admin.display(description='Слов')
+    def items_count(self, obj):
+        return obj.items.count()
 
     @admin.display(description='Модуль/Блок')
     def module_info(self, obj):

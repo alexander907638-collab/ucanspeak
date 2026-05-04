@@ -4,7 +4,11 @@
       "Bash(python manage.py check)",
       "Bash(python manage.py makemigrations user_sessions)",
       "Bash(echo \"EXIT CODE: $?\")",
-      "Bash(python manage.py makemigrations user_sessions --noinput)"
+      "Bash(python manage.py makemigrations user_sessions --noinput)",
+      "Bash(python ../../scripts/verify_all.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('lesson/admin.py', encoding='utf-8'\\).read\\(\\)\\); print\\('Syntax OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('lesson/views.py', encoding='utf-8'\\).read\\(\\)\\); print\\('views.py OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('lesson/serializers.py', encoding='utf-8'\\).read\\(\\)\\); print\\('serializers.py OK'\\)\")"
     ]
   },
   "enabledMcpjsonServers": [
